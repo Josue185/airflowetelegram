@@ -1,0 +1,70 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    networks:
+      - airflow
+
+  airflow-init:
+    image: apache/airflow:2.9.1
+    entrypoint: /bin/bash
+    command: -c "airflow db init"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    depends_on:
+      - postgres
+    networks:
+      - airflow
+
+  webserver:
+    image: apache/airflow:2.9.1
+    user: "0:0"
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__FERNET_KEY=w4nxvNoyqLDeUiWeJtV2kJZzNcX18b1c
+      - AIRFLOW__WEBSERVER__SECRET_KEY=super-secret-key-josue-2025
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      - postgres
+    networks:
+      - airflow
+    command: webserver
+
+  scheduler:
+    image: apache/airflow:2.9.1
+    user: "0:0"
+    restart: always
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__FERNET_KEY=w4nxvNoyqLDeUiWeJtV2kJZzNcX18b1c
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      - postgres
+    networks:
+      - airflow
+    command: scheduler
+
+volumes:
+  postgres-db-volume:
+
+networks:
+  airflow:
+
